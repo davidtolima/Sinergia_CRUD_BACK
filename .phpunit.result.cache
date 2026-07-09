@@ -1,0 +1,1 @@
+{"version":2,"defects":[],"times":{"PacienteValidacionTest::testDatosCompletosYValidosNoDevuelveErrores":0.008,"PacienteValidacionTest::testCorreoSinArrobaDevuelveError":0.001,"PacienteValidacionTest::testNumeroDocumentoVacioDevuelveError":0,"PacienteValidacionTest::testDatosVaciosDevuelveVariosErrores":0.001}}
