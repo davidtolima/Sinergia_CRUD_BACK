@@ -1,11 +1,12 @@
 # Sinergia_CRUD_BACK
 
-API RESTful en PHP plano (PDO) para la gestion de pacientes del sistema SIHOS. Consume MySQL y expone endpoints JSON consumidos por el frontend en [Sinergia_CRUD_FRONT](https://github.com/davidtolima/Sinergia_CRUD_FRONT).
+API RESTful en PHP plano (PDO) para la gestion de pacientes de la Clinica Tolima. Consume MySQL y expone endpoints JSON consumidos por el frontend en [Sinergia_CRUD_FRONT](https://github.com/davidtolima/Sinergia_CRUD_FRONT).
 
 ## Requisitos
 
 - XAMPP (o cualquier MySQL corriendo en `127.0.0.1:3306`)
 - PHP 8.0 o superior con las extensiones `pdo_mysql`, `mbstring`, `openssl` habilitadas
+- Composer (para instalar PHPUnit)
 
 ## Instalacion
 
@@ -34,7 +35,13 @@ password: (vacio)
 
 Ajusta esos valores si tu instalacion de MySQL usa credenciales distintas.
 
-### 3. Levantar el servidor
+### 3. Instalar dependencias (solo para las pruebas unitarias)
+
+```bash
+composer install
+```
+
+### 4. Levantar el servidor
 
 ```bash
 php -S localhost:8000
@@ -42,39 +49,74 @@ php -S localhost:8000
 
 La API queda disponible en `http://localhost:8000/api`.
 
-## Usuario administrador de prueba
+## Autenticacion
+
+Todos los endpoints de `paciente.php` requieren un token JWT. El flujo es:
+
+1. Llamar a `POST /api/usuario.php` con el correo y la contrasena para obtener el token.
+2. Enviar ese token en cada peticion siguiente con la cabecera `Authorization: Bearer <token>`.
+
+El token expira despues de 1 hora (configurable en [api/config/jwt.php](api/config/jwt.php)).
+
+### Usuario administrador de prueba
 
 | Campo | Valor |
 |---|---|
 | Correo | admin@sihos.com |
 | Contrasena | 1234567890 |
 
+Ejemplo de login:
+
+```bash
+curl -X POST http://localhost:8000/api/usuario.php \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sihos.com","password":"1234567890"}'
+```
+
 ## Endpoints
 
-| Metodo | Ruta | Descripcion |
-|---|---|---|
-| GET | `/api/paciente.php` | Lista todos los pacientes |
-| GET | `/api/paciente.php?id=1` | Obtiene un paciente por id |
-| POST | `/api/paciente.php` | Crea un paciente |
-| PUT | `/api/paciente.php` | Actualiza un paciente (requiere `id` en el body) |
-| DELETE | `/api/paciente.php?id=1` | Elimina un paciente |
-| GET | `/api/catalogos.php` | Devuelve departamentos, municipios, tipos de documento y generos |
+| Metodo | Ruta | Requiere token | Descripcion |
+|---|---|---|---|
+| POST | `/api/usuario.php` | No | Inicia sesion y devuelve el JWT |
+| GET | `/api/catalogos.php` | No | Devuelve departamentos, municipios, tipos de documento y generos |
+| GET | `/api/paciente.php` | Si | Lista todos los pacientes |
+| GET | `/api/paciente.php?id=1` | Si | Obtiene un paciente por id |
+| POST | `/api/paciente.php` | Si | Crea un paciente |
+| PUT | `/api/paciente.php` | Si | Actualiza un paciente (requiere `id` en el body) |
+| DELETE | `/api/paciente.php?id=1` | Si | Elimina un paciente |
+
+## Pruebas unitarias
+
+Con las dependencias instaladas (`composer install`):
+
+```bash
+php vendor/bin/phpunit
+```
+
+Cubre la funcion de validacion de datos del paciente (`validarPaciente()`): datos validos, correo con formato invalido, campos obligatorios faltantes.
 
 ## Estructura del proyecto
 
 ```
 api/
   config/
-    db.php              -> Conexion PDO a MySQL
+    db.php                -> Conexion PDO a MySQL
+    jwt.php                -> Generacion y validacion de tokens JWT
   controllers/
+    UserController.php     -> Login
     obtener_pacientes.php
     agregar_paciente.php
     actualizar_paciente.php
     eliminar_paciente.php
     obtener_catalogos.php
-  paciente.php           -> Router del CRUD de pacientes
-  catalogos.php          -> Router de catalogos
+  middleware/
+    autenticacion.php      -> Verifica el token JWT en cada peticion protegida
+  paciente.php              -> Router del CRUD de pacientes (protegido)
+  catalogos.php             -> Router de catalogos (publico)
+  usuario.php                -> Router de login
 database/
-  schema.sql             -> Creacion de tablas
-  seeders.sql             -> Datos de prueba
+  schema.sql                -> Creacion de tablas
+  seeders.sql                -> Datos de prueba
+tests/
+  PacienteValidacionTest.php -> Pruebas unitarias con PHPUnit
 ```
